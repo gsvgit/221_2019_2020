@@ -1,0 +1,50 @@
+#---------------------------------#
+#    environment configuration    #
+#---------------------------------#
+
+# Build worker image (VM template)
+image: Visual Studio 2017
+
+clone_depth: 3
+
+platform:
+  - Win32
+  - x64
+
+configuration:
+  - Debug
+  - Release
+  
+# environment:
+#   matrix:
+#     - TOOLSET: v140
+  
+matrix:
+  fast_finish: false
+
+# scripts that are called at very beginning, before repo cloning
+init:
+  - cmd: cmake --version
+  - cmd: msbuild /version
+
+install:
+  - git submodule update --init --recursive
+  - ps: Start-FileDownload 'https://graphviz.gitlab.io/_pages/Download/windows/graphviz-2.38.msi'
+  - cmd: msiexec /i graphviz-2.38.msi /quiet /qn /norestart /log install.log
+  - cmd: set PATH=C:\Program Files (x86)\Graphviz2.38\bin;%PATH% 
+  - cmd: dot -?
+
+before_build:
+  - cmake . -Bbuild -A%PLATFORM% -DCMAKE_BUILD_TYPE=%configuration%
+
+build:
+  project: build/CPP_BOILERPLATE.sln
+  parallel: true
+  verbosity: minimal
+  
+test_script:
+  - cd build
+  - set CTEST_OUTPUT_ON_FAILURE=1
+  - ctest -C %configuration% 
+  - cd ..
+
